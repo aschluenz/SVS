@@ -1,9 +1,14 @@
-import re, collections
+import re, collections, copy, random
 
 englishLetterFreq = {'e': 12.70, 't': 9.06, 'a': 8.17, 'o': 7.51, 'i': 6.97, 'n': 6.75, 's': 6.33, 'h': 6.09, 'r': 5.99, 'd': 4.25, 'l': 4.03, 'c': 2.78,
  'u': 2.76, 'm': 2.41, 'w': 2.36, 'f': 2.23, 'g': 2.02, 'y': 1.97, 'p': 1.93, 'b': 1.29, 'v': 0.98, 'k': 0.77, 'j': 0.15, 'x': 0.15, 'q': 0.10, 'z': 0.07}
 
-ETAOIN = 'ETAOINSHRDLCUMWFGYPBVKJXQZ'
+words_len_1 = ['a','i','o']
+
+words_len_2 = ['of', 'to', 'in', 'it', 'is', 'be', 'as', 'at', 'so', 'we', 'he', 'by', 'or', 'on', 'do', 'if', 'me', 'my', 'up',
+ 'an', 'go', 'no', 'us', 'am']
+
+ETAOIN = 'ETAOINSHRDLCUMWFGYPBVKJXQZ'.lower()
 
 LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.lower()
 
@@ -12,6 +17,16 @@ alphabet_small = LETTERS.lower()
 #################################
 #Start Spell-Checker from http://norvig.com/spell-correct.html
 #################################
+
+
+def encrypt(text, keyDict):
+    newtext = ''
+    for c in text:
+        try:
+            newtext += keyDict[c]
+        except KeyError:
+            newtext += c
+    return newtext
 
 def words(text):
     return re.findall('[a-z]+', text.lower())
@@ -23,15 +38,11 @@ def train(features):
     return model
 
 NWORDS = train(words(file('dictionary.txt').read()))
-#alphabet = LETTERS.lower()
 
 def edits1(word):
     s = [(word[:i], word[i:]) for i in range(len(word) + 1)]
-    #deletes    = [a + b[1:] for a, b in s if b]
     transposes = [a + b[1] + b[0] + b[2:] for a, b in s if len(b)>1]
     replaces   = [a + c + b[1:] for a, b in s for c in alphabet_small if b]
-    #inserts    = [a + c + b     for a, b in s for c in alphabet_small]
-    #return set(deletes + transposes + replaces + inserts)
     return set(transposes + replaces)
 
 
@@ -43,32 +54,49 @@ def known(words):
 
 def correct(word):
     candidates = known([word]) or known(edits1(word)) or known_edits2(word) or [word]
-    #print (word, candidates)
     return max(candidates, key=NWORDS.get)
-
 
 #################################
 #End Spell-Checker
 #################################
 
-def countAllLetters(message):
+def getDictWords():
+    file = open('dictionary.txt', 'r')
+    text = file.read().lower()
+    list = text.split()
+    return list
 
+def recognizedWordsInPercent(text):
+    wordsCount = 0
+    wordsFoundCounter = 0
+    words = text.split()
+    wordsDict = getDictWords()
+    for word in words:
+        wordsCount += 1
+        if word in wordsDict:
+            wordsFoundCounter += 1
+            print("found: ", word)
+    return wordsFoundCounter/wordsCount*100
+
+def countAllLetters(message, key):
     letterCount = {}
     for c in alphabet_small:
         letterCount[c] = 0
-
     all_Letters = 0
-
     for letter in message:
         if letter in alphabet_small:
             letterCount[letter] += 1
             all_Letters += 1
-
-    for letter in letterCount:
-        #calculate Percent
-        valueInPercent = (letterCount[letter] * 100) / all_Letters
-        letterCount[letter] = valueInPercent
-    return sorted(letterCount, key=letterCount.get, reverse=True)
+    #print letterCount
+    # sortiert buchstaben nach haeufigkeit...haeufigster zu erst
+    sortedList = sorted(letterCount, key=letterCount.get, reverse=True)
+    print sortedList
+    #update Key Dict
+    for item in sortedList:
+        index = sortedList.index(item)
+        keyValue = ETAOIN[index]
+        key[keyValue] = item
+    print key
 
 def generateDecryptKey(freq_Dict):
     decrypt_Dict = dict(zip(freq_Dict, englishLetterFreq))
@@ -85,7 +113,6 @@ def replaceLettersByFrequence(message,decryptKeyDict):
     return replaced_Message
 
 def findWords(message):
-
     new_message = message
     #all words from string as list
     wordlist = re.sub("[^\w]", " ",  message).split()
@@ -100,24 +127,120 @@ def findWords(message):
             new_message = new_message.replace(word,new_word)
     return new_message
 
+def correctKey(dictionary, letterOne, letterTwo):
+    newKey_Dict = dict(zip(dictionary.values(), dictionary.keys()))
+    try:
+        tempOne = newKey_Dict[letterOne]
+        tempTwo = newKey_Dict[letterTwo]
+        dictionary[tempOne] = letterTwo
+        dictionary[tempTwo] = letterOne
+    except KeyError:
+        return dictionary
+
+    return dictionary
+
+def getWordsByLengthOne(key,message):
+    # all words as list
+    word_dict = dict()
+    wordlist = re.sub("[^a-zA-Z]", " ",  message).split()
+    for word in wordlist:
+        if len(word) == 1:
+            if word in word_dict:
+                word_dict[word] += 1
+            else:
+                word_dict[word] = 1
+    resultList = sorted(word_dict, key=word_dict.get, reverse=True)
+    resultList = resultList[:3]
+    index = 0
+    for e in resultList:
+        correctKey(key,e,words_len_1[index])
+        index +=1
+
+def getWordsByLengthTwo(key, message):
+    word_dict = dict()
+    wordlist = re.sub("[^a-zA-Z]", " ",  message).split()
+    for word in wordlist:
+        if len(word) == 2:
+            if word in word_dict:
+                word_dict[word] += 1
+            else:
+                word_dict[word] = 1
+    resultList = sorted(word_dict, key=word_dict.get, reverse=True)
+    resultList = resultList[:24]
+    indexA = 0
+    for e in resultList:
+        indexB = 0
+        for char in words_len_2[indexA]:
+            correctKey(key,e[indexB], char)
+            indexB +=1
+        indexA += 1
+
+def correctKeyBySpellChecker(text, key):
+    keyTemp = copy.deepcopy(key)
+
+    words = text.split()
+    random.shuffle(words)
+
+    for word in words:
+        newKey = correctWord(word, keyTemp)
+        if newKey != False:
+            return newKey
+    return keyTemp
+
+def correctWord(word, key):
+    candidates = known([word]) or known(edits1(word)) or known_edits2(word) or [word]
+    newWord = max(candidates, key=NWORDS.get)
+
+    if word != newWord:
+        wordLen = len(word)
+        counter = 0
+        for counter in range(wordLen):
+            key = correctKey(key, word[counter], newWord[counter])
+            return key
+    return False
+
+def initKey():
+    key_dict = dict.fromkeys(ETAOIN)
+    return key_dict
+
+def readFile(fileName):
+    file = open(fileName, 'r')
+    text = file.read().lower()
+    return text
 
 def main():
-    cyphertext = """Adiz Avtzqeci Tmzubb wsa m Pmilqev halpqavtakuoi, lgouqdaf, kdmktsvmztsl, izr xoexghzr kkusitaaf. Vz wsa twbhdg ubalmmzhdad qz hce vmhsgohuqbo ox kaakulmd gxiwvos, krgdurdny i rcmmstugvtawz ca tzm ocicwxfg jf "stscmilpy" oid "uwydptsbuci" wabt hce Lcdwig eiovdnw. Bgfdny qe kddwtk qjnkqpsmev ba pz tzm roohwz at xoexghzr kkusicw izr vrlqrwxist uboedtuuznum. Pimifo Icmlv Emf DI, Lcdwig owdyzd xwd hce Ywhsmnemzh Xovm mby Cqxtsm Supacg (GUKE) oo Bdmfqclwg Bomk, Tzuhvif'a ocyetzqofifo ositjm. Rcm a lqys ce oie vzav wr Vpt 8, lpq gzclqab mekxabnittq tjr Ymdavn fihog cjgbhvnstkgds. Zm psqikmp o iuejqf jf lmoviiicqg aoj jdsvkavs Uzreiz qdpzmdg, dnutgrdny bts helpar jf lpq pjmtm, mb zlwkffjmwktoiiuix avczqzs ohsb ocplv nuby swbfwigk naf ohw Mzwbms umqcifm. Mtoej bts raj pq kjrcmp oo tzm Zooigvmz Khqauqvl Dincmalwdm, rhwzq vz cjmmhzd gvq ca tzm rwmsl lqgdgfa rcm a kbafzd-hzaumae kaakulmd, hce SKQ. Wi 1948 Tmzubb jgqzsy Msf Zsrmsv'e Qjmhcfwig Dincmalwdm vt Eizqcekbqf Pnadqfnilg, ivzrw pq onsaafsy if bts yenmxckmwvf ca tzm Yoiczmehzr uwydptwze oid tmoohe avfsmekbqr dn eifvzmsbuqvl tqazjgq. Pq kmolm m dvpwz ab ohw ktshiuix pvsaa at hojxtcbefmewn, afl bfzdakfsy okkuzgalqzu xhwuuqvl jmmqoigve gpcz ie hce Tmxcpsgd-Lvvbgbubnkq zqoxtawz, kciup isme xqdgo otaqfqev qz hce 1960k. Bgfdny'a tchokmjivlabk fzsmtfsy if i ofdmavmz krgaqqptawz wi 1952, wzmz vjmgaqlpad iohn wwzq goidt uzgeyix wi tzm Gbdtwl Wwigvwy. Vz aukqdoev bdsvtemzh rilp rshadm tcmmgvqg (xhwuuqvl uiehmalqab) vs sv mzoejvmhdvw ba dmikwz. Hpravs rdev qz 1954, xpsl whsm tow iszkk jqtjrw pug 42id tqdhcdsg, rfjm ugmbddw xawnofqzu. Vn avcizsl lqhzreqzsy tzif vds vmmhc wsa eidcalq; vds ewfvzr svp gjmw wfvzrk jqzdenmp vds vmmhc wsa mqxivmzhvl. Gv 10 Esktwunsm 2009, fgtxcrifo mb Dnlmdbzt uiydviyv, Nfdtaat Dmiem Ywiikbqf Bojlab Wrgez avdw iz cafakuog pmjxwx ahwxcby gv nscadn at ohw Jdwoikp scqejvysit xwd "hce sxboglavs kvy zm ion tjmmhzd." Sa at Haq 2012 i bfdvsbq azmtmd'g widt ion bwnafz tzm Tcpsw wr Zjrva ivdcz eaigd yzmbo Tmzubb a kbmhptgzk dvrvwz wa efiohzd.""".lower()
-    print('Original Cyphertext: ')
-    print(cyphertext)
-    LetterDictByFrequence = countAllLetters(cyphertext)
 
-    decrypt_key = generateDecryptKey(LetterDictByFrequence)
-    print('Key with letter statistic: ')
-    print(decrypt_key)
+    cyphertext = readFile('alice_encrypt.txt')
+    # init Key with "None" values ordered by ETAOIN
+    key = initKey()
 
-    new_Text = replaceLettersByFrequence(cyphertext, decrypt_key)
-    print('Text after letter replacement: ')
-    print(new_Text)
+    print countAllLetters(cyphertext, key)
 
-    Text_after_spell_checker = findWords(new_Text.lower())
-    print('Text after Spell-Checker:')
-    print(Text_after_spell_checker)
+    new_Text = replaceLettersByFrequence(cyphertext, key)
+
+    #getWordsByLengthOne(key,cyphertext)
+
+    #getWordsByLengthTwo(key,cyphertext)
+
+    decypherText = encrypt(cyphertext, key)
+
+    recognizedWords = recognizedWordsInPercent(decypherText)
+
+    # while True:
+    #     print ('Words recognized: ', recognizedWords, '%')
+    #     if recognizedWords> 60:
+    #         break;
+    #
+    #     keyTemp = correctKeyBySpellChecker(decypherText, key)
+    #
+    #     decriphedTemp = encrypt(cyphertext, keyTemp)
+    #     recognizedWordsTemp = recognizedWordsInPercent(decriphedTemp)
+    #
+    #     if recognizedWords < recognizedWordsTemp:
+    #         key = keyTemp
+    #         recognizedWords = recognizedWordsTemp
+
+
 
 if __name__ == "__main__":
 	main()
