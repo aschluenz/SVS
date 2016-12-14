@@ -75,10 +75,10 @@ def recognizedWordsInPercent(text):
         wordsCount += 1
         if word in wordsDict:
             wordsFoundCounter += 1
-            print("found: ", word)
+            #print("found: ", word)
     return wordsFoundCounter/wordsCount*100
 
-def countAllLetters(message, key):
+def countAllLetters(message):
     letterCount = {}
     for c in alphabet_small:
         letterCount[c] = 0
@@ -87,20 +87,18 @@ def countAllLetters(message, key):
         if letter in alphabet_small:
             letterCount[letter] += 1
             all_Letters += 1
-    #print letterCount
     # sortiert buchstaben nach haeufigkeit...haeufigster zu erst
+    print ("lettercounted: ", letterCount)
     sortedList = sorted(letterCount, key=letterCount.get, reverse=True)
-    print sortedList
-    #update Key Dict
-    for item in sortedList:
-        index = sortedList.index(item)
-        keyValue = ETAOIN[index]
-        key[keyValue] = item
-    print key
+    print ("sorted list: " , sortedList)
+
+    new_dict = dict(zip(sortedList,ETAOIN))
+
+    print ("dict with key from lettercount statistic: ",new_dict)
+    return new_dict
 
 def generateDecryptKey(freq_Dict):
     decrypt_Dict = dict(zip(freq_Dict, englishLetterFreq))
-    #decrypt_Dict = dict(zip(englishLetterFreq,freq_Dict))
     return decrypt_Dict
 
 def replaceLettersByFrequence(message,decryptKeyDict):
@@ -127,16 +125,21 @@ def findWords(message):
             new_message = new_message.replace(word,new_word)
     return new_message
 
-def correctKey(dictionary, letterOne, letterTwo):
-    newKey_Dict = dict(zip(dictionary.values(), dictionary.keys()))
+def correctKey(dictionary, Key, Value):
+    newKey_Dict = dictionary
     try:
-        tempOne = newKey_Dict[letterOne]
-        tempTwo = newKey_Dict[letterTwo]
-        dictionary[tempOne] = letterTwo
-        dictionary[tempTwo] = letterOne
+         tempOne = newKey_Dict[Key] # value an stelle letterOne 
+         temp_key = newKey_Dict.keys()[newKey_Dict.values().index(tempOne)]
+
+         #tempTwo = newKey_Dict[tempOne] # value an stelle lettertwo
+         dictionary[tempOne] = Value 
+         dictionary[temp_key] = Key  
+
+
+
     except KeyError:
         return dictionary
-
+    print ("key after corerction: ", dictionary)    
     return dictionary
 
 def getWordsByLengthOne(key,message):
@@ -150,9 +153,12 @@ def getWordsByLengthOne(key,message):
             else:
                 word_dict[word] = 1
     resultList = sorted(word_dict, key=word_dict.get, reverse=True)
+    print ("words length 1:" ,resultList)
     resultList = resultList[:3]
     index = 0
     for e in resultList:
+        print ("e: ", e)
+        print ("words_index: ", words_len_1[index])
         correctKey(key,e,words_len_1[index])
         index +=1
 
@@ -201,6 +207,7 @@ def correctWord(word, key):
 
 def initKey():
     key_dict = dict.fromkeys(ETAOIN)
+    print ("init key: ", key_dict)
     return key_dict
 
 def readFile(fileName):
@@ -212,33 +219,34 @@ def main():
 
     cyphertext = readFile('alice_encrypt.txt')
     # init Key with "None" values ordered by ETAOIN
-    key = initKey()
+    #key = initKey()
 
-    print countAllLetters(cyphertext, key)
+    key = countAllLetters(cyphertext)
 
     new_Text = replaceLettersByFrequence(cyphertext, key)
+    ##### bis hier alles richtig !!!
+    #print(new_Text)
+    getWordsByLengthOne(key,new_Text)
 
-    #getWordsByLengthOne(key,cyphertext)
+    #getWordsByLengthTwo(key,new_Text)
 
-    #getWordsByLengthTwo(key,cyphertext)
+    #decypherText = encrypt(cyphertext, key)
 
-    decypherText = encrypt(cyphertext, key)
+    #recognizedWords = recognizedWordsInPercent(decypherText)
 
-    recognizedWords = recognizedWordsInPercent(decypherText)
-
-    # while True:
-    #     print ('Words recognized: ', recognizedWords, '%')
-    #     if recognizedWords> 60:
-    #         break;
-    #
-    #     keyTemp = correctKeyBySpellChecker(decypherText, key)
-    #
-    #     decriphedTemp = encrypt(cyphertext, keyTemp)
-    #     recognizedWordsTemp = recognizedWordsInPercent(decriphedTemp)
-    #
-    #     if recognizedWords < recognizedWordsTemp:
-    #         key = keyTemp
-    #         recognizedWords = recognizedWordsTemp
+    #while True:
+    #    print ('Words recognized: ', recognizedWords, '%')
+    #    if recognizedWords> 60:
+    #        break;
+    
+    #    keyTemp = correctKeyBySpellChecker(decypherText, key)
+    
+    #    decriphedTemp = encrypt(cyphertext, keyTemp)
+    #    recognizedWordsTemp = recognizedWordsInPercent(decriphedTemp)
+    
+     #   if recognizedWords < recognizedWordsTemp:
+     #       key = keyTemp
+     #       recognizedWords = recognizedWordsTemp
 
 
 
