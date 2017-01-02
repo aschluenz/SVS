@@ -1,4 +1,6 @@
 import re, collections, copy, random
+from spellchecker import *
+from Ceasar import *
 
 englishLetterFreq = {'e': 12.70, 't': 9.06, 'a': 8.17, 'o': 7.51, 'i': 6.97, 'n': 6.75, 's': 6.33, 'h': 6.09, 'r': 5.99, 'd': 4.25, 'l': 4.03, 'c': 2.78,
  'u': 2.76, 'm': 2.41, 'w': 2.36, 'f': 2.23, 'g': 2.02, 'y': 1.97, 'p': 1.93, 'b': 1.29, 'v': 0.98, 'k': 0.77, 'j': 0.15, 'x': 0.15, 'q': 0.10, 'z': 0.07}
@@ -13,52 +15,6 @@ ETAOIN = 'ETAOINSHRDLCUMWFGYPBVKJXQZ'.lower()
 LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.lower()
 
 alphabet_small = LETTERS.lower()
-
-#################################
-#Start Spell-Checker from http://norvig.com/spell-correct.html
-#################################
-
-
-def encrypt(text, keyDict):
-    newtext = ''
-    for c in text:
-        try:
-            newtext += keyDict[c]
-        except KeyError:
-            newtext += c
-    return newtext
-
-def words(text):
-    return re.findall('[a-z]+', text.lower())
-
-def train(features):
-    model = collections.defaultdict(lambda: 1)
-    for f in features:
-        model[f] += 1
-    return model
-
-NWORDS = train(words(file('dictionary.txt').read()))
-
-def edits1(word):
-    s = [(word[:i], word[i:]) for i in range(len(word) + 1)]
-    transposes = [a + b[1] + b[0] + b[2:] for a, b in s if len(b)>1]
-    replaces   = [a + c + b[1:] for a, b in s for c in alphabet_small if b]
-    return set(transposes + replaces)
-
-
-def known_edits2(word):
-    return set(e2 for e1 in edits1(word) for e2 in edits1(e1) if e2 in NWORDS)
-
-def known(words):
-    return set(w for w in words if w in NWORDS)
-
-def correct(word):
-    candidates = known([word]) or known(edits1(word)) or known_edits2(word) or [word]
-    return max(candidates, key=NWORDS.get)
-
-#################################
-#End Spell-Checker
-#################################
 
 def getDictWords():
     file = open('dictionary.txt', 'r')
@@ -75,8 +31,9 @@ def recognizedWordsInPercent(text):
         wordsCount += 1
         if word in wordsDict:
             wordsFoundCounter += 1
-            #print("found: ", word)
-    return wordsFoundCounter/wordsCount*100
+    print ("allwords: ", wordsCount, "found wordscount: ", wordsFoundCounter)
+    recWords = float(wordsFoundCounter) / float(wordsCount)*100
+    print ('Words recognized: ', recWords, '%')
 
 def countAllLetters(message):
     letterCount = {}
@@ -94,7 +51,7 @@ def countAllLetters(message):
 
     new_dict = dict(zip(sortedList,ETAOIN))
 
-    print ("dict with key from lettercount statistic: ",new_dict)
+    print ("dict with key from lettercount statistic: ", new_dict)
     return new_dict
 
 def generateDecryptKey(freq_Dict):
@@ -121,25 +78,21 @@ def findWords(message):
         new_word = correct(word)
         if new_word != word:
             word_correction[word] = new_word
-            #exchange words in string
             new_message = new_message.replace(word,new_word)
     return new_message
 
-def correctKey(dictionary, Key, Value):
+def correctKey(dictionary, letterA, letterB):
     newKey_Dict = dictionary
-    try:
-         tempOne = newKey_Dict[Key] # value an stelle letterOne 
-         temp_key = newKey_Dict.keys()[newKey_Dict.values().index(tempOne)]
 
-         #tempTwo = newKey_Dict[tempOne] # value an stelle lettertwo
-         dictionary[tempOne] = Value 
-         dictionary[temp_key] = Key  
-
-
-
-    except KeyError:
-        return dictionary
-    print ("key after corerction: ", dictionary)    
+    if letterA in LETTERS and letterB in LETTERS:
+        print("pair to exchange: ", letterA, letterB)
+        try:
+            tempKey1 = [key for key in newKey_Dict.items() if key[1] == letterA][0][0]
+            tempKey2 = [key for key in newKey_Dict.items() if key[1] == letterB][0][0]
+            dictionary[tempKey1] = letterB
+            dictionary[tempKey2] = letterA
+        except KeyError:
+            return dictionary
     return dictionary
 
 def getWordsByLengthOne(key,message):
@@ -152,17 +105,18 @@ def getWordsByLengthOne(key,message):
                 word_dict[word] += 1
             else:
                 word_dict[word] = 1
+    #liste der woerter mit einem Buchstaben sortiert nach haeufigkeit
     resultList = sorted(word_dict, key=word_dict.get, reverse=True)
-    print ("words length 1:" ,resultList)
-    resultList = resultList[:3]
+    resultList = resultList[:2]
     index = 0
+    new_key = dict()
     for e in resultList:
-        print ("e: ", e)
-        print ("words_index: ", words_len_1[index])
-        correctKey(key,e,words_len_1[index])
+        new_key = correctKey(key,e,words_len_1[index])
         index +=1
+    return new_key
 
 def getWordsByLengthTwo(key, message):
+    temp_list = words_len_2
     word_dict = dict()
     wordlist = re.sub("[^a-zA-Z]", " ",  message).split()
     for word in wordlist:
@@ -173,13 +127,33 @@ def getWordsByLengthTwo(key, message):
                 word_dict[word] = 1
     resultList = sorted(word_dict, key=word_dict.get, reverse=True)
     resultList = resultList[:24]
+    #print ("resultlist from two: ", resultList)
     indexA = 0
+    new_key = dict()
+
+    list_with_words = []
+    list_not_found_words = []
+
     for e in resultList:
-        indexB = 0
-        for char in words_len_2[indexA]:
-            correctKey(key,e[indexB], char)
-            indexB +=1
-        indexA += 1
+        if e in temp_list:
+            list_with_words.append(e)
+            list_not_found_words.append(e)
+
+    for item in list_with_words:
+        resultList.remove(item)
+        temp_list.remove(item)
+
+    for item in resultList:
+        itemstart = item[0]
+        for b in temp_list:
+            found_items = []
+            if b.startswith(itemstart):
+                found_items.append(b)
+                if len(found_items) == 1:
+                    temp_list.remove(found_items[0])
+                    new_key = correctKey(key, item[1], found_items[0][1])
+    return new_key
+
 
 def correctKeyBySpellChecker(text, key):
     keyTemp = copy.deepcopy(key)
@@ -196,14 +170,14 @@ def correctKeyBySpellChecker(text, key):
 def correctWord(word, key):
     candidates = known([word]) or known(edits1(word)) or known_edits2(word) or [word]
     newWord = max(candidates, key=NWORDS.get)
-
+    tempkey = key
     if word != newWord:
         wordLen = len(word)
         counter = 0
         for counter in range(wordLen):
-            key = correctKey(key, word[counter], newWord[counter])
-            return key
-    return False
+            if word[counter] != newWord[counter]:
+                tempkey = correctKey(key, word[counter], newWord[counter])
+    return tempkey
 
 def initKey():
     key_dict = dict.fromkeys(ETAOIN)
@@ -216,39 +190,33 @@ def readFile(fileName):
     return text
 
 def main():
-
     cyphertext = readFile('alice_encrypt.txt')
-    # init Key with "None" values ordered by ETAOIN
-    #key = initKey()
-
     key = countAllLetters(cyphertext)
 
     new_Text = replaceLettersByFrequence(cyphertext, key)
     ##### bis hier alles richtig !!!
-    #print(new_Text)
-    getWordsByLengthOne(key,new_Text)
+    recognizedWordsInPercent(new_Text)
 
-    #getWordsByLengthTwo(key,new_Text)
+    key = getWordsByLengthOne(key,new_Text)
 
-    #decypherText = encrypt(cyphertext, key)
+    new_Text = encrypt(cyphertext,key)
 
-    #recognizedWords = recognizedWordsInPercent(decypherText)
+    recognizedWords = recognizedWordsInPercent(new_Text)
 
-    #while True:
-    #    print ('Words recognized: ', recognizedWords, '%')
-    #    if recognizedWords> 60:
-    #        break;
-    
-    #    keyTemp = correctKeyBySpellChecker(decypherText, key)
-    
-    #    decriphedTemp = encrypt(cyphertext, keyTemp)
-    #    recognizedWordsTemp = recognizedWordsInPercent(decriphedTemp)
-    
-     #   if recognizedWords < recognizedWordsTemp:
-     #       key = keyTemp
-     #       recognizedWords = recognizedWordsTemp
+    while True:
+      if recognizedWords> 40.0:
+            print encrypt(cyphertext, key)
+            print key 
+            break;
 
+      keyTemp = correctKeyBySpellChecker(new_Text, key)
 
+      decriphedTemp = encrypt(cyphertext, keyTemp)
+      recognizedWordsTemp = recognizedWordsInPercent(decriphedTemp)
+
+      if recognizedWords < recognizedWordsTemp:
+          key = keyTemp
+          recognizedWords = recognizedWordsTemp
 
 if __name__ == "__main__":
 	main()
