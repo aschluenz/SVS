@@ -36,8 +36,8 @@ def generateText():
     new_file.write(cyphertext)
     new_file.close()
     
-#def main():
-#	generateText()    
+def main():
+	generateText()    
 
-#if __name__ == "__main__":
-#	main()
+if __name__ == "__main__":
+	main()

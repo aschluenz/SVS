@@ -31,41 +31,21 @@ def recognizedWordsInPercent(text):
         wordsCount += 1
         if word in wordsDict:
             wordsFoundCounter += 1
-    print ("allwords: ", wordsCount, "found wordscount: ", wordsFoundCounter)
     recWords = float(wordsFoundCounter) / float(wordsCount)*100
-    print ('Words recognized: ', recWords, '%')
+    print ("Words: ", wordsCount, "Found Words: ", wordsFoundCounter, "Percent: ", '% 12.1f' % recWords, "%")
+    return recWords
 
-def countAllLetters(message):
-    letterCount = {}
-    for c in alphabet_small:
-        letterCount[c] = 0
-    all_Letters = 0
-    for letter in message:
-        if letter in alphabet_small:
-            letterCount[letter] += 1
-            all_Letters += 1
-    # sortiert buchstaben nach haeufigkeit...haeufigster zu erst
-    print ("lettercounted: ", letterCount)
-    sortedList = sorted(letterCount, key=letterCount.get, reverse=True)
-    print ("sorted list: " , sortedList)
-
-    new_dict = dict(zip(sortedList,ETAOIN))
-
-    print ("dict with key from lettercount statistic: ", new_dict)
-    return new_dict
+def countAllLetters(text):
+    dictionary = dict()
+    for c in LETTERS:
+        dictionary[c] = text.count(c)
+    letterList = sorted(dictionary, key=dictionary.get, reverse = True)
+    decd = dict(zip(letterList,ETAOIN))
+    return decd
 
 def generateDecryptKey(freq_Dict):
     decrypt_Dict = dict(zip(freq_Dict, englishLetterFreq))
     return decrypt_Dict
-
-def replaceLettersByFrequence(message,decryptKeyDict):
-    replaced_Message =''
-    for symbol in message:
-        if symbol in LETTERS:
-            replaced_Message = replaced_Message + decryptKeyDict[symbol]
-        else:
-            replaced_Message = replaced_Message + symbol
-    return replaced_Message
 
 def findWords(message):
     new_message = message
@@ -81,21 +61,7 @@ def findWords(message):
             new_message = new_message.replace(word,new_word)
     return new_message
 
-def correctKey(dictionary, letterA, letterB):
-    newKey_Dict = dictionary
-
-    if letterA in LETTERS and letterB in LETTERS:
-        print("pair to exchange: ", letterA, letterB)
-        try:
-            tempKey1 = [key for key in newKey_Dict.items() if key[1] == letterA][0][0]
-            tempKey2 = [key for key in newKey_Dict.items() if key[1] == letterB][0][0]
-            dictionary[tempKey1] = letterB
-            dictionary[tempKey2] = letterA
-        except KeyError:
-            return dictionary
-    return dictionary
-
-def getWordsByLengthOne(key,message):
+def getWordsByLengthOne(key ,message):
     # all words as list
     word_dict = dict()
     wordlist = re.sub("[^a-zA-Z]", " ",  message).split()
@@ -109,7 +75,8 @@ def getWordsByLengthOne(key,message):
     resultList = sorted(word_dict, key=word_dict.get, reverse=True)
     resultList = resultList[:2]
     index = 0
-    new_key = dict()
+    new_key = key
+
     for e in resultList:
         new_key = correctKey(key,e,words_len_1[index])
         index +=1
@@ -127,7 +94,6 @@ def getWordsByLengthTwo(key, message):
                 word_dict[word] = 1
     resultList = sorted(word_dict, key=word_dict.get, reverse=True)
     resultList = resultList[:24]
-    #print ("resultlist from two: ", resultList)
     indexA = 0
     new_key = dict()
 
@@ -156,28 +122,15 @@ def getWordsByLengthTwo(key, message):
 
 
 def correctKeyBySpellChecker(text, key):
-    keyTemp = copy.deepcopy(key)
-
+    tempKey = copy.deepcopy(key)
     words = text.split()
     random.shuffle(words)
 
     for word in words:
-        newKey = correctWord(word, keyTemp)
-        if newKey != False:
-            return newKey
-    return keyTemp
-
-def correctWord(word, key):
-    candidates = known([word]) or known(edits1(word)) or known_edits2(word) or [word]
-    newWord = max(candidates, key=NWORDS.get)
-    tempkey = key
-    if word != newWord:
-        wordLen = len(word)
-        counter = 0
-        for counter in range(wordLen):
-            if word[counter] != newWord[counter]:
-                tempkey = correctKey(key, word[counter], newWord[counter])
-    return tempkey
+        updatedKey = correctWord(word, tempKey)
+        if updatedKey != False:
+            return updatedKey
+    return tempKey
 
 def initKey():
     key_dict = dict.fromkeys(ETAOIN)
@@ -190,33 +143,41 @@ def readFile(fileName):
     return text
 
 def main():
-    cyphertext = readFile('alice_encrypt.txt')
-    key = countAllLetters(cyphertext)
-
-    new_Text = replaceLettersByFrequence(cyphertext, key)
+    print ("START TO ENCRYPT !!!")
+    # verschluesselten text auslesen
+    cipherText = readFile('alice_encrypt.txt')
+    # key erzeugen auf basis der buchstabenverteilung
+    key = countAllLetters(cipherText)
+    # text entschluesseln nach buchstabenhaeufigkeit
+    decipherText = encrypt(cipherText, key)
     ##### bis hier alles richtig !!!
-    recognizedWordsInPercent(new_Text)
+    wordsRecognized = recognizedWordsInPercent(decipherText)
+    # update Key 
+    key = getWordsByLengthOne(key ,decipherText)
+    #update decipherText
+    decipherText = encrypt(cipherText,key)
 
-    key = getWordsByLengthOne(key,new_Text)
-
-    new_Text = encrypt(cyphertext,key)
-
-    recognizedWords = recognizedWordsInPercent(new_Text)
+    wordsRecognized = recognizedWordsInPercent(decipherText)
 
     while True:
-      if recognizedWords> 40.0:
-            print encrypt(cyphertext, key)
-            print key 
-            break;
+        if wordsRecognized > 59.1:
+            file = open('alice_decrypted.txt', 'w')
+            file.write(encrypt(cipherText, key))
+            file.close()
+            break
 
-      keyTemp = correctKeyBySpellChecker(new_Text, key)
+        keyTemp = correctKeyBySpellChecker(decipherText, key)
 
-      decriphedTemp = encrypt(cyphertext, keyTemp)
-      recognizedWordsTemp = recognizedWordsInPercent(decriphedTemp)
+        decipherTextTemp = encrypt(cipherText, keyTemp)
+        recognizedWordsTemp = recognizedWordsInPercent(decipherTextTemp)
 
-      if recognizedWords < recognizedWordsTemp:
-          key = keyTemp
-          recognizedWords = recognizedWordsTemp
+        print ("compare: ", wordsRecognized, recognizedWordsTemp)
+        if wordsRecognized < recognizedWordsTemp:
+            key = keyTemp
+            wordsRecognized = recognizedWordsTemp
+
+    print encrypt(cipherText, key)
+    print key 
 
 if __name__ == "__main__":
 	main()

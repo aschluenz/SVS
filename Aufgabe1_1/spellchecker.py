@@ -2,6 +2,9 @@ import re, collections
 
 alphabet_small = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.lower()
 
+LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.lower()
+
+
 #################################
 #Start Spell-Checker from http://norvig.com/spell-correct.html
 #################################
@@ -37,3 +40,42 @@ def correct(word):
 #################################
 #End Spell-Checker
 #################################
+
+def correctWord(word, key):
+    candidates = known([word]) or known(edits1(word)) or known_edits2(word) or [word]
+    newWord = max(candidates, key=NWORDS.get)
+    if word != newWord:
+        print ("word to correct: ", word , newWord)
+        wordLen = len(word)
+        counter = 0
+
+        for counter in range(wordLen):
+            if word[counter] != newWord[counter]:
+                print("substitution: ", word[counter], newWord[counter])
+                key = correctKey(key, word[counter], newWord[counter])
+                return key
+    return False
+
+# def correctKey(dictionary, letterA, letterB):
+#     newKey_Dict = dictionary
+#     if letterA in alphabet_small and letterB in alphabet_small:
+#         print("Pair to swap: ", letterA," with ", letterB)
+#         try:
+#             tempKey1 = [key for key in newKey_Dict.items() if key[1] == letterA][0][0]
+#             tempKey2 = [key for key in newKey_Dict.items() if key[1] == letterB][0][0]
+#             dictionary[tempKey1] = letterB
+#             dictionary[tempKey2] = letterA
+#         except KeyError:
+#             return dictionary
+#     return dictionary
+
+def correctKey(dictionary, letterOne, letterTwo):
+    new_dict = dict(zip(dictionary.values(), dictionary.keys()))
+    try:
+        tempOne = new_dict[letterOne]
+        tempTwo = new_dict[letterTwo]
+        dictionary[tempOne] = letterTwo
+        dictionary[tempTwo] = letterOne
+    except KeyError:
+        return dictionary
+    return dictionary
