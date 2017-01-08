@@ -1,4 +1,4 @@
-import re, collections, copy, random
+import re, collections, copy, random, string
 from spellchecker import *
 from Ceasar import *
 
@@ -160,7 +160,7 @@ def main():
     wordsRecognized = recognizedWordsInPercent(decipherText)
 
     while True:
-        if wordsRecognized > 59.1:
+        if wordsRecognized > 60:
             file = open('alice_decrypted.txt', 'w')
             file.write(encrypt(cipherText, key))
             file.close()
