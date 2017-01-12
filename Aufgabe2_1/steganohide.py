@@ -49,12 +49,15 @@ def hide(imagefile, message):
         return "Done!"
     return "Wrong Image Mode, couldn't Hide"
 
-def main(argv):
-    textfile = sys.argv[1]
-    message = readTextFile(textfile)
-    imagefile = sys.argv[2]
+# def main(argv):
+#     textfile = 
+#     message = readTextFile(textfile)
+#     imagefile = sys.argv[2]
 
-    hide(imagefile,message)
+#     hide(imagefile,message)
 
 if __name__ == "__main__":
-	main(sys.argv[1:])
+    textfile = sys.argv[1]
+    imagefile = sys.argv[2]
+	print ("textfile: ", textfile)
+    print ("imagefile: ", imagefile)

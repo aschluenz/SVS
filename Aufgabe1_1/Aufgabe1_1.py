@@ -25,7 +25,8 @@ def getDictWords():
 def recognizedWordsInPercent(text):
     wordsCount = 0
     wordsFoundCounter = 0
-    words = text.split()
+    words = re.sub("[^\w]", " ",  text).split()
+
     wordsDict = getDictWords()
     for word in words:
         wordsCount += 1
@@ -123,7 +124,7 @@ def getWordsByLengthTwo(key, message):
 
 def correctKeyBySpellChecker(text, key):
     tempKey = copy.deepcopy(key)
-    words = text.split()
+    words = re.sub("[^\w]", " ",  text).split()
     random.shuffle(words)
 
     for word in words:
@@ -157,11 +158,13 @@ def main():
     #update decipherText
     decipherText = encrypt(cipherText,key)
 
+    key = getWordsByLengthTwo(key, decipherText)
+
     wordsRecognized = recognizedWordsInPercent(decipherText)
 
     while True:
-        if wordsRecognized > 60:
-            file = open('alice_decrypted.txt', 'w')
+        if wordsRecognized > 55:
+            file = open('alice_decrypted_1.txt', 'w')
             file.write(encrypt(cipherText, key))
             file.close()
             break
@@ -169,6 +172,9 @@ def main():
         keyTemp = correctKeyBySpellChecker(decipherText, key)
 
         decipherTextTemp = encrypt(cipherText, keyTemp)
+
+        #key2Temp = getWordsByLengthTwo(keyTemp, decipherText)
+
         recognizedWordsTemp = recognizedWordsInPercent(decipherTextTemp)
 
         print ("compare: ", wordsRecognized, recognizedWordsTemp)

@@ -56,19 +56,6 @@ def correctWord(word, key):
                 return key
     return False
 
-# def correctKey(dictionary, letterA, letterB):
-#     newKey_Dict = dictionary
-#     if letterA in alphabet_small and letterB in alphabet_small:
-#         print("Pair to swap: ", letterA," with ", letterB)
-#         try:
-#             tempKey1 = [key for key in newKey_Dict.items() if key[1] == letterA][0][0]
-#             tempKey2 = [key for key in newKey_Dict.items() if key[1] == letterB][0][0]
-#             dictionary[tempKey1] = letterB
-#             dictionary[tempKey2] = letterA
-#         except KeyError:
-#             return dictionary
-#     return dictionary
-
 def correctKey(dictionary, letterOne, letterTwo):
     new_dict = dict(zip(dictionary.values(), dictionary.keys()))
     try:
