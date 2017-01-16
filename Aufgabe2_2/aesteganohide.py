@@ -15,7 +15,6 @@ def args_parser():
     return vars(args)
 
 def generateIV():
-    #rand = random(8)
     string = 'b' + '"' + '12345678' + '"'
     return string
 
@@ -23,6 +22,8 @@ def get_mac(in_text, key):
     dig = hmac.new(key.encode(), digestmod=hashlib.sha256)
     dig.update(in_text.encode())
     generated_mac = str(dig.hexdigest())
+    print ("Ausgabe get_mac: ", generated_mac)
+    print ("key len", len(generated_mac))
     return generated_mac
 
 def compare_macs(in_text,in_mac,mac_pw_in):
@@ -42,11 +43,15 @@ def encrypt(mac_passw,password,text_file,image_file,do_xtea_encrypt,img):
 
     if do_xtea_encrypt:
         textWithMac = (mac + text)
-        key =  (get_mac("",password)).encode()
-
-        x = new(key,mode=MODE_CFB,IV=generateIV())
+        key = (password.ljust(16,'0')).encode()
+        #key =  (get_mac("",password)).encode()
+        
+        print("key: ", len(key))
+        
+        #x = new(key,mode=MODE_CFB,IV=generateIV())
+        x = new(key , mode=MODE_CFB, IV=b"12345678")
         encryptedText = x.encrypt(textWithMac.encode())
-        encryptedText = binascii.a2b_hex(text_len)+ encryptedText
+        encryptedText = binascii.a2b_hex(text_len) + encryptedText
         encryptedText = str(binascii.b2a_hex(encryptedText))[2:]
         encryptedText = encryptedText[:len(encryptedText)-1]
 
