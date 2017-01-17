@@ -1,63 +1,65 @@
-from PIL import Image
-import binascii,sys
+import itertools
+import os
+import sys
 
-def rgb2hex(r, g, b):
-    return '#{:02x}{:02x}{:02x}'.format(r,g,b)
+def hide(textFile, imageFile):
+    header, data = readImageFile(imageFile)
+    secret = readText(textFile)
+    lastbits = bitGenerator(secret)
 
-def hex2rgb(hexcode):
-    return tuple(map(ord, hexcode[1:].decode('hex')))
+    buffer = []
+    buffer.append(header)
 
-def str2bin(message):
-    binary = bin(int(binascii.hexlify(message), 16))
-    return binary[2:]
+    for byte in data:
+        try:
+            #http://stackoverflow.com/questions/6059454/replace-least-significant-bit-with-bitwise-operations
+            buffer.append(chr((ord(byte) & ~1) | lastbits.next()))
+        except StopIteration:
+            buffer.append(byte)
 
-def readTextFile(fileName):
-    message = open(fileName,'r').read()
-    return message
+    writeBytes('%s.ste' % imageFile, buffer)
 
-def encode(hexcode, number):
-    if hexcode[-1] in ('0','1','2','3','4','5'):
-        hexcode = hexcode[:-1] + number
-        return hexcode
-    else:
-        return None
+def bitGenerator(message):
+    return itertools.chain(
+        (int(bit) for bit in byteToString(len(list(stringToBits(message)))).zfill(64)),
+        stringToBits(message),
+        )
 
-def hide(imagefile, message):
-    img = Image.open(imagefile)
-    #end of message
-    binary = str2bin(message) + '1111111111111110'
-    if img.mode in ('RGBA'):
-        img = img.convert('RGBA')
-        data = img.getdata()
+def stringToBits(byteBuffer):
+    for byte in map(ord, byteBuffer):
+        for bit in byteToString(byte).zfill(8):
+            yield int(bit)
 
-        newData = []
-        number = 0
-        temp = ''
-        for item in data:
-            if(number < len(binary)):
-                new_pixel = encode(rgb2hex(item[0],item[1],item[2]), binary[number])
-                if new_pixel == None:
-                    newData.append(item)
-                else:
-                    r,g,b = hex2rgb(new_pixel)
-                    newData.append((r,g,b,255))
-                    number += 1
-            else:
-                newData.append(item)
-        img.putdata(newData)
-        img.save(imagefile + '.ste', "BMP")
-        return "Done!"
-    return "Wrong Image Mode, couldn't Hide"
+def byteToString(byteBuffer):
+    return str(byteBuffer) if byteBuffer <= 1 else byteToString(byteBuffer >> 1) + str(byteBuffer & 1)
 
-# def main(argv):
-#     textfile = 
-#     message = readTextFile(textfile)
-#     imagefile = sys.argv[2]
+def readText(fileName):
+    file = open(fileName, 'rb')
+    text = file.read()
+    file.close()
+    return text.strip()
 
-#     hide(imagefile,message)
+def readImageFile(fileName):
+    image = open(fileName, 'rb')
+    header = image.read(55)
+    data = image.read()
+    image.close()
+    return (header,data)
+
+def writeBytes(fileName, bytes):
+    file = open(fileName, 'wb')
+    file.write(''.join(bytes))
+    file.close()
+
+def main():
+    if len(sys.argv) != 3:
+        print 'Usage: %s <text-file> <bmp-file>' % __file__
+        sys.exit(1)
+
+    textFile = os.path.abspath(sys.argv[1])
+    imageFile = os.path.abspath(sys.argv[2])
+
+    hide(textFile,imageFile)
 
 if __name__ == "__main__":
-    textfile = sys.argv[1]
-    imagefile = sys.argv[2]
-	print ("textfile: ", textfile)
-    print ("imagefile: ", imagefile)
+    main()
